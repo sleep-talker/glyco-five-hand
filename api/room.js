@@ -64,7 +64,7 @@ export default async function handler(req, res) {
       return reply(res, 200, await snapshot(roomCode, body.token));
     }
     if (action === 'finalize') {
-      if (self.slot !== 1) throw new Error('방장만 최종 상성표를 확정할 수 있습니다.');
+      const current = await players(roomCode); if (current.length !== 2 || current.some(player => !player.ready)) throw new Error('두 플레이어의 준비 완료를 기다리고 있습니다.');
       await db(`game_rooms?code=eq.${encodeURIComponent(roomCode)}`, { method: 'PATCH', headers: jsonHeaders, body: JSON.stringify(body.approved ? { status: 'battle', final_rules: body.finalRules } : { status: 'lobby', final_rules: null }) });
       if (!body.approved) await db(`game_players?room_code=eq.${encodeURIComponent(roomCode)}`, { method: 'PATCH', headers: jsonHeaders, body: JSON.stringify({ ready: false }) });
       return reply(res, 200, await snapshot(roomCode, body.token));

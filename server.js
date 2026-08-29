@@ -103,4 +103,4 @@ const server = http.createServer(async (req, res) => {
   res.writeHead(200, { 'Content-Type': types[path.extname(file)] || 'application/octet-stream' });
   fs.createReadStream(file).pipe(res);
 });
-server.listen(port, () => console.log(`Glyco game: http://localhost:${port}`));
+server.listen(port, '0.0.0.0', () => console.log(`Glyco game: http://localhost:${port}`));

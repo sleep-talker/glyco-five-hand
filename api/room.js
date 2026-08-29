@@ -1,7 +1,5 @@
 import crypto from 'node:crypto';
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const jsonHeaders = { 'Content-Type': 'application/json' };
 
 function reply(res, status, body) { return res.status(status).json(body); }
@@ -10,6 +8,8 @@ function token() { return crypto.randomUUID(); }
 function clean(player) { const { token: _, ...safe } = player; return safe; }
 
 async function db(path, options = {}) {
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!supabaseUrl || !supabaseKey) throw new Error('SUPABASE_URL과 SUPABASE_SERVICE_ROLE_KEY를 설정해 주세요.');
   const response = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
     ...options,
@@ -37,7 +37,7 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return reply(res, 405, { error: 'POST만 허용됩니다.' });
   try {
     const body = req.body || {}, action = body.action, roomCode = String(body.roomCode || '').toUpperCase();
-    if (!supabaseUrl || !supabaseKey) throw new Error('온라인 대전은 SUPABASE_URL과 SUPABASE_SERVICE_ROLE_KEY 설정이 필요합니다.');
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) throw new Error('온라인 대전은 SUPABASE_URL과 SUPABASE_SERVICE_ROLE_KEY 설정이 필요합니다.');
     if (action === 'create') {
       let created; for (let i = 0; i < 5 && !created; i++) { const roomCodeCandidate = code(); try { await db('game_rooms', { method: 'POST', headers: jsonHeaders, body: JSON.stringify({ code: roomCodeCandidate }) }); created = roomCodeCandidate; } catch {} }
       if (!created) throw new Error('방 코드를 만들지 못했습니다. 다시 시도해 주세요.');

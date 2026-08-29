@@ -28,9 +28,14 @@ async function authenticated(roomCode, playerToken) {
 }
 async function snapshot(roomCode, playerToken) {
   await authenticated(roomCode, playerToken);
-  const room = await roomByCode(roomCode);
+  let room = await roomByCode(roomCode);
   if (!room) throw new Error('방을 찾을 수 없습니다.');
-  return { room, players: (await players(roomCode)).map(clean) };
+  const currentPlayers = await players(roomCode);
+  if (room.status === 'reviewing' && currentPlayers.length === 2 && currentPlayers.every(player => player.ready)) {
+    await db(`game_rooms?code=eq.${encodeURIComponent(roomCode)}`, { method: 'PATCH', headers: jsonHeaders, body: JSON.stringify({ status: 'battle' }) });
+    room = await roomByCode(roomCode);
+  }
+  return { room, players: currentPlayers.map(clean) };
 }
 
 export default async function handler(req, res) {
@@ -60,7 +65,7 @@ export default async function handler(req, res) {
     }
     if (action === 'ready') {
       await db(`game_players?room_code=eq.${encodeURIComponent(roomCode)}&token=eq.${encodeURIComponent(body.token)}`, { method: 'PATCH', headers: jsonHeaders, body: JSON.stringify({ ready: true }) });
-      const current = await players(roomCode); if (current.length === 2 && current.every(player => player.ready)) await db(`game_rooms?code=eq.${encodeURIComponent(roomCode)}`, { method: 'PATCH', headers: jsonHeaders, body: JSON.stringify({ status: 'reviewing' }) });
+      const current = await players(roomCode); if (current.length === 2 && current.every(player => player.ready)) await db(`game_rooms?code=eq.${encodeURIComponent(roomCode)}`, { method: 'PATCH', headers: jsonHeaders, body: JSON.stringify({ status: 'battle' }) });
       return reply(res, 200, await snapshot(roomCode, body.token));
     }
     if (action === 'finalize') {

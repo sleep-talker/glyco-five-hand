@@ -30,7 +30,7 @@ export default async function handler(req, res) {
   const input = req.body || {};
   if (!process.env.GEMINI_API_KEY) return res.status(200).json(localJudge(input));
   const key = requestKey(input), previous = recentRequests.get(key), now = Date.now();
-  if (previous && now - previous < 15000) return res.status(429).json({ error: '같은 AI 검사가 이미 요청되었습니다. 15초 뒤에 다시 시도해 주세요.' });
+  if (previous && now - previous < 3000) return res.status(429).json({ error: '같은 AI 검사가 이미 요청되었습니다. 3초 뒤에 다시 시도해 주세요.' });
   recentRequests.set(key, now);
   if (recentRequests.size > 200) for (const [oldKey, timestamp] of recentRequests) if (now - timestamp > 60000) recentRequests.delete(oldKey);
   console.info(`[Gemini request] ${new Date().toISOString()} mode=${input.mode || 'register'}`);

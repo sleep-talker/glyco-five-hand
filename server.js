@@ -2,6 +2,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import judgeHandler from './api/judge.js';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const port = Number(process.env.PORT || 3000);
@@ -63,7 +64,7 @@ async function judge(req, res) {
   }
   try {
     const input = await readBody(req);
-    const prompt = `당신은 지뢰 글리코의 공정성 심판 AI입니다. 아래 7장의 손모양과 규칙을 엄격하게 검증하세요.
+    const prompt = `당신은 지뢰 글리코의 공정성 심판 AI입니다. 각 플레이어의 5장 손모양과 규칙을 엄격하게 검증하세요.
 
 판정 규칙:
 1) 기본 패는 가위>보, 바위>가위, 보>바위입니다. 기본 패가 창작 패를 이긴다는 선언이 없으면 둘은 무승부입니다.
@@ -89,7 +90,11 @@ ${JSON.stringify(input, null, 2)}`;
 
 const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') { res.writeHead(204, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type' }); return res.end(); }
-  if (req.method === 'POST' && req.url === '/api/judge') return judge(req, res);
+  if (req.method === 'POST' && req.url === '/api/judge') {
+    try { req.body = await readBody(req); } catch (error) { return json(res, 400, { error: error.message }); }
+    const wrapped = { status: code => ({ json: body => json(res, code, body) }), json: body => json(res, 200, body) };
+    return judgeHandler(req, wrapped);
+  }
   const requested = req.url === '/' ? '/index.html' : req.url;
   const file = path.resolve(root, `.${requested}`);
   if (!file.startsWith(root) || !fs.existsSync(file)) return json(res, 404, { error: 'Not found' });

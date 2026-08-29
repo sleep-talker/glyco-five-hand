@@ -11,7 +11,7 @@ function parseVerdict(text) {
   if (start >= 0 && end > start) return JSON.parse(cleaned.slice(start, end + 1));
   throw new Error('invalid JSON');
 }
-function hasUniversalWinRule(ruleText) { return /(?:모든|전부|전체|모두|무조건|다)\s*(?:패|것|상대|대상)?\s*(?:을|를|에)?\s*이기/.test(String(ruleText || '').replace(/\s/g, '')); }
+function hasUniversalWinRule(ruleText) { return /(?:모든|전부|전체|모두|무조건|다)\s*(?:패|것|상대|대상)?\s*(?:을|를|에)?\s*이(?:기|긴|겨|길)/.test(String(ruleText || '').replace(/\s/g, '')); }
 function auditCardVerdict(input, verdict) {
   if (input.mode !== 'card') return verdict;
   const ruleText = String(input.card?.ruleText || '');
@@ -21,7 +21,7 @@ function auditCardVerdict(input, verdict) {
   const beatIds = new Set((verdict.beats || []).map(String));
   const allKnown = knownHands.length >= 3 && knownHands.every(hand => beatIds.has(hand.id) || beatIds.has(hand.name));
   if (!universalClaim && !allKnown) return verdict;
-  return { ...verdict, approved: false, summary: '기존 패 전체를 이기는 규칙은 등록할 수 없습니다.', reasons: ['가위·바위·보와 내 창작 패을 포함한 상성표에서 약점 없이 전부 이기는 사기 규칙입니다.'], beats: [] };
+  return { ...verdict, approved: false, summary: '기존 패 전체를 이기는 규칙은 등록할 수 없습니다.', reasons: ['가위·바위·보와 내 창작 패를 포함한 상성표에서 약점 없이 전부 이기는 사기 규칙입니다.'], beats: [] };
 }
 
 function localJudge(input) {

@@ -81,8 +81,17 @@ export default async function handler(req, res) {
     if (action === 'resolve') {
       if (self.slot !== 1) throw new Error('방장 화면에서 승패를 확정합니다.');
       const current = await players(roomCode); if (current.length !== 2 || current.some(player => !player.choice)) throw new Error('두 플레이어의 선택을 기다리고 있습니다.');
-      await Promise.all(current.map(player => db(`game_players?room_code=eq.${encodeURIComponent(roomCode)}&slot=eq.${player.slot}`, { method: 'PATCH', headers: jsonHeaders, body: JSON.stringify({ choice: null, score: player.score + (body.winner === player.slot ? 1 : 0) }) })));
+      await Promise.all(current.map(player => db(`game_players?room_code=eq.${encodeURIComponent(roomCode)}&slot=eq.${player.slot}`, { method: 'PATCH', headers: jsonHeaders, body: JSON.stringify({ choice: null, ready: false, score: player.score + (body.winner === player.slot ? 1 : 0) }) })));
       await db(`game_rooms?code=eq.${encodeURIComponent(roomCode)}`, { method: 'PATCH', headers: jsonHeaders, body: JSON.stringify({ last_result: { winner: body.winner, reason: body.reason || 'AI 판정 완료' } }) });
+      return reply(res, 200, await snapshot(roomCode, body.token));
+    }
+    if (action === 'nextRound') {
+      await db(`game_players?room_code=eq.${encodeURIComponent(roomCode)}&token=eq.${encodeURIComponent(body.token)}`, { method: 'PATCH', headers: jsonHeaders, body: JSON.stringify({ ready: true }) });
+      const current = await players(roomCode);
+      if (current.length === 2 && current.every(player => player.ready)) {
+        await Promise.all(current.map(player => db(`game_players?room_code=eq.${encodeURIComponent(roomCode)}&slot=eq.${player.slot}`, { method: 'PATCH', headers: jsonHeaders, body: JSON.stringify({ ready: false, choice: null }) })));
+        await db(`game_rooms?code=eq.${encodeURIComponent(roomCode)}`, { method: 'PATCH', headers: jsonHeaders, body: JSON.stringify({ last_result: null }) });
+      }
       return reply(res, 200, await snapshot(roomCode, body.token));
     }
     throw new Error('알 수 없는 방 요청입니다.');

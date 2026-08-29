@@ -23,7 +23,8 @@ const server = http.createServer(async (req, res) => {
     const wrapped = { status: code => ({ json: body => json(res, code, body) }), json: body => json(res, 200, body) };
     return req.url === '/api/room' ? roomHandler(req, wrapped) : judgeHandler(req, wrapped);
   }
-  const requested = req.url === '/' ? '/index.html' : req.url;
+  const pathname = new URL(req.url, 'http://localhost').pathname;
+  const requested = pathname === '/' ? '/index.html' : pathname;
   const file = path.resolve(root, `.${requested}`);
   if (!file.startsWith(root) || !fs.existsSync(file)) return json(res, 404, { error: 'Not found' });
   const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8' };

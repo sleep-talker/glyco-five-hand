@@ -22,5 +22,5 @@ create table if not exists game_players (
   unique (room_code, slot)
 );
 
-alter table game_rooms disable row level security;
-alter table game_players disable row level security;
+alter table game_rooms enable row level security;
+alter table game_players enable row level security;

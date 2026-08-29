@@ -51,6 +51,8 @@
       <footer><span>✦</span> 규칙은 서로 존중하고, 승부는 즐겁게!</footer>
     </main>
     <div class="modal hidden" id="resultModal"><div class="modal-card"><div class="confetti">✦</div><p class="eyebrow">GAME OVER</p><h2 id="winnerTitle">플레이어 1 승리!</h2><p id="winnerCopy"></p><button class="primary-button" id="playAgain">새 게임 시작하기 <span>↻</span></button></div></div>
+    <style>.ai-busy{position:fixed;inset:0;z-index:30;display:grid;place-items:center;background:#28253238;backdrop-filter:blur(2px)}.ai-busy>div{min-width:255px;padding:25px 30px;border-radius:18px;background:#fffdf8;box-shadow:0 20px 50px #2825322b;text-align:center}.ai-busy .ai-spinner{width:25px;height:25px;border-width:3px;margin-bottom:11px}.ai-busy strong{display:block;font:20px 'Jua';color:var(--ink)}.ai-busy p{margin:6px 0 0;color:#8a827a;font-size:12px}</style>
+    <div class="ai-busy hidden" id="aiBusy"><div><i class="ai-spinner"></i><strong>Gemini AI 판정 중</strong><p id="aiBusyText">규칙을 분석하고 있어요…</p></div></div>
     <script src="app.js"></script>
   </body>
 </html>

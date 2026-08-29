@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>지뢰 글리코 · 오손도손 가위바위보</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Jua&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+    <style>.ai-review{margin-top:22px;padding:16px 18px;border-radius:14px;font-size:12px;line-height:1.6}.ai-review.ok{background:#eef8f0;border:1px solid #c4e5ca;color:#357847}.ai-review.fail{background:#fff1ee;border:1px solid #f1c0b8;color:#a94d42}.ai-review b{font-family:'Jua',sans-serif;font-size:16px}.ai-review p{margin:4px 0 0}.ai-review .review-action{margin-top:11px;border:0;border-radius:8px;background:#282532;color:#fff;padding:9px 13px;font:12px 'Jua';cursor:pointer}</style>
+  </head>
+  <body>
+    <div class="background-blob blob-a"></div>
+    <div class="background-blob blob-b"></div>
+    <main class="app-shell">
+      <header class="topbar">
+        <div class="brand"><span class="brand-mark">✌</span><div><strong>지뢰 글리코</strong><small>오손도손 가위바위보</small></div></div>
+        <div class="header-tools"><span class="round-pill" id="phasePill">규칙 설계</span><button class="icon-button" id="resetButton" title="새 게임">↻</button></div>
+      </header>
+
+      <section class="hero">
+        <div><p class="eyebrow">FIVE-HAND SHOWDOWN</p><h1>내가 만든 패로<br /><em>상대의 빈틈을 노려요</em></h1><p class="hero-copy">가위·바위·보에 각자의 창작 패 2장을 더해<br />총 7장의 상성표에서 펼치는 두뇌 싸움!</p></div>
+        <div class="hero-sticker"><span>✦</span><b>먼저<br />5점!</b><small>동시 출격</small></div>
+      </section>
+
+      <div class="stepper" id="stepper">
+        <div class="step active"><span>01</span><b>패 만들기</b><small>각자 2장씩</small></div><div class="step-line"></div><div class="step"><span>02</span><b>상성 확인</b><small>7장 매트릭스</small></div><div class="step-line"></div><div class="step"><span>03</span><b>승부하기</b><small>먼저 5점</small></div>
+      </div>
+
+      <section id="setupView" class="view">
+        <div class="section-heading"><div><p class="eyebrow">01 · CREATE YOUR HANDS</p><h2 id="setupTitle">플레이어 1의 창작 패</h2></div><p class="section-note">상대가 보지 않게 입력하고<br />완료하면 공개됩니다.</p></div>
+        <div class="player-tabs"><button class="player-tab selected" data-player="0"><span class="avatar coral">1</span><span>플레이어 1</span><i>작성 중</i></button><button class="player-tab" data-player="1"><span class="avatar blue">2</span><span>플레이어 2</span><i>대기 중</i></button></div>
+        <div class="custom-grid" id="customGrid"></div>
+        <div class="setup-footer"><span class="tip">💡 이름은 짧고 기억하기 쉽게, 이모지는 패의 얼굴이 돼요.</span><button class="primary-button" id="nextSetup">패 2장 저장하기 <span>→</span></button></div>
+      </section>
+
+      <section id="matrixView" class="view hidden">
+        <div class="section-heading"><div><p class="eyebrow">02 · REVEAL &amp; ANALYZE</p><h2>상성표를 머릿속에 담아요</h2></div><p class="section-note">색이 진할수록 승리<br />회색은 무승부예요.</p></div>
+        <div class="reveal-banner"><span class="sparkle">✦</span><div><b>규칙 공개 완료!</b><p>총 7장의 패가 한 판에 모였어요. 서로의 약점을 찾아보세요.</p></div><span class="total-hands">7 HANDS</span></div>
+        <div class="matrix-wrap"><div class="matrix-scroll"><table id="matrixTable"></table></div><div class="matrix-legend"><span><i class="legend-win"></i> 행이 열을 이김</span><span><i class="legend-lose"></i> 행이 열에 짐</span><span><i class="legend-draw"></i> 무승부</span></div></div>
+        <div class="analysis-footer"><p>🧠 <b>작전 시간</b> — 상대가 어떤 패를 낼지 예상해 보세요.</p><button class="primary-button" id="startBattle">승부 시작하기 <span>→</span></button></div>
+      </section>
+
+      <section id="battleView" class="view hidden">
+        <div class="battle-top"><div><p class="eyebrow">03 · BATTLE</p><h2>동시에, 하나!</h2></div><div class="scoreboard"><div><span>PLAYER 1</span><b id="score0">0</b></div><strong>:</strong><div><span>PLAYER 2</span><b id="score1">0</b></div></div></div>
+        <div class="battle-status" id="battleStatus">각자의 패를 고른 뒤, 출격 버튼을 눌러주세요.</div>
+        <div class="battle-boards"><div class="battle-player p0"><div class="player-label"><span class="avatar coral">1</span><b>플레이어 1</b><small id="picked0">선택 전</small></div><div class="hand-options" id="handOptions0"></div><button class="launch-button coral-button" data-player="0">출격!</button></div><div class="vs-mark">VS</div><div class="battle-player p1"><div class="player-label"><span class="avatar blue">2</span><b>플레이어 2</b><small id="picked1">선택 전</small></div><div class="hand-options" id="handOptions1"></div><button class="launch-button blue-button" data-player="1">출격!</button></div></div>
+        <div class="battle-log"><div class="log-header"><b>전투 기록</b><span id="roundLabel">ROUND 1</span></div><div id="battleLogList"><p class="empty-log">첫 승부를 기다리는 중…</p></div></div>
+      </section>
+      <footer><span>✦</span> 규칙은 서로 존중하고, 승부는 즐겁게!</footer>
+    </main>
+    <div class="modal hidden" id="resultModal"><div class="modal-card"><div class="confetti">✦</div><p class="eyebrow">GAME OVER</p><h2 id="winnerTitle">플레이어 1 승리!</h2><p id="winnerCopy"></p><button class="primary-button" id="playAgain">새 게임 시작하기 <span>↻</span></button></div></div>
+    <script src="app.js"></script>
+  </body>
+</html>

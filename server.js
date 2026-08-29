@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import judgeHandler from './api/judge.js';
+import roomHandler from './api/room.js';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const port = Number(process.env.PORT || 3000);
@@ -90,10 +91,10 @@ ${JSON.stringify(input, null, 2)}`;
 
 const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') { res.writeHead(204, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type' }); return res.end(); }
-  if (req.method === 'POST' && req.url === '/api/judge') {
+  if (req.method === 'POST' && (req.url === '/api/judge' || req.url === '/api/room')) {
     try { req.body = await readBody(req); } catch (error) { return json(res, 400, { error: error.message }); }
     const wrapped = { status: code => ({ json: body => json(res, code, body) }), json: body => json(res, 200, body) };
-    return judgeHandler(req, wrapped);
+    return req.url === '/api/room' ? roomHandler(req, wrapped) : judgeHandler(req, wrapped);
   }
   const requested = req.url === '/' ? '/index.html' : req.url;
   const file = path.resolve(root, `.${requested}`);

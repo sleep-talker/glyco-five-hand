@@ -2,12 +2,16 @@
   "version": 2,
   "builds": [
     { "src": "api/judge.js", "use": "@vercel/node" },
+    { "src": "api/room.js", "use": "@vercel/node" },
     { "src": "index.html", "use": "@vercel/static" },
+    { "src": "multiplayer.html", "use": "@vercel/static" },
     { "src": "styles.css", "use": "@vercel/static" },
-    { "src": "app.js", "use": "@vercel/static" }
+    { "src": "app.js", "use": "@vercel/static" },
+    { "src": "multiplayer.js", "use": "@vercel/static" }
   ],
   "routes": [
     { "src": "/api/judge", "dest": "/api/judge.js" },
+    { "src": "/api/room", "dest": "/api/room.js" },
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]

@@ -11,6 +11,18 @@ function parseVerdict(text) {
   if (start >= 0 && end > start) return JSON.parse(cleaned.slice(start, end + 1));
   throw new Error('invalid JSON');
 }
+function hasUniversalWinRule(ruleText) { return /(?:모든|전부|전체|모두|무조건|다)\s*(?:패|것|상대|대상)?\s*(?:을|를|에)?\s*이기/.test(String(ruleText || '').replace(/\s/g, '')); }
+function auditCardVerdict(input, verdict) {
+  if (input.mode !== 'card') return verdict;
+  const ruleText = String(input.card?.ruleText || '');
+  const universalClaim = hasUniversalWinRule(ruleText);
+  const ownPrefix = String(input.card?.id || '').slice(0, 2);
+  const knownHands = (input.hands || []).filter(hand => hand.id !== input.card?.id && hand.name && !/^창작 패\s*\d+$/.test(hand.name) && (hand.owner === 'base' || String(hand.id).startsWith(ownPrefix)));
+  const beatIds = new Set((verdict.beats || []).map(String));
+  const allKnown = knownHands.length >= 3 && knownHands.every(hand => beatIds.has(hand.id) || beatIds.has(hand.name));
+  if (!universalClaim && !allKnown) return verdict;
+  return { ...verdict, approved: false, summary: '기존 패 전체를 이기는 규칙은 등록할 수 없습니다.', reasons: ['가위·바위·보와 내 창작 패을 포함한 상성표에서 약점 없이 전부 이기는 사기 규칙입니다.'], beats: [] };
+}
 
 function localJudge(input) {
   if (input.mode === 'battle') {
@@ -43,13 +55,14 @@ export default async function handler(req, res) {
   };
   const provider = cloudflare.accountId && cloudflare.token ? 'cloudflare' : process.env.GEMINI_API_KEY ? 'gemini' : 'local';
   if (provider === 'local') return res.status(200).json(localJudge(input));
+  if (input.mode === 'card' && hasUniversalWinRule(input.card?.ruleText)) return res.status(200).json({ approved: false, summary: '모든 패를 이기는 규칙은 등록할 수 없습니다.', reasons: ['약점 없이 전부 이기는 사기 규칙입니다.'], beats: [], engine: 'rule-guard' });
   if (provider === 'cloudflare' && !cloudflareJsonModels.has(cloudflare.model)) return res.status(400).json({ error: `「${cloudflare.model}」은 구조화된 JSON 판정을 지원하지 않습니다. .env의 AI_CLOUDFLARE_AI_MODEL을 @cf/meta/llama-3.1-8b-instruct-fast 로 바꿔 주세요.` });
   const key = requestKey(input), previous = recentRequests.get(key), now = Date.now();
   if (previous && now - previous < 3000) return res.status(429).json({ error: '같은 AI 검사가 이미 요청되었습니다. 3초 뒤에 다시 시도해 주세요.' });
   recentRequests.set(key, now);
   if (recentRequests.size > 200) for (const [oldKey, timestamp] of recentRequests) if (now - timestamp > 60000) recentRequests.delete(oldKey);
   console.info(`[AI request] ${new Date().toISOString()} provider=${provider} mode=${input.mode || 'register'}`);
-  const prompt = input.mode === 'battle' ? `당신은 지뢰 글리코 경기 심판 AI입니다. 등록된 한글 규칙과 기본 가위바위보 규칙만 사용해 두 선택의 승패를 판정하세요. winner는 플레이어 1이면 0, 플레이어 2면 1, 무승부면 -1입니다. reason은 한국어 한 문장, 40자 이내로 작성하세요.\n\n데이터:\n${JSON.stringify(input)}` : input.mode === 'card' ? `당신은 지뢰 글리코 창작 패의 예비 등록 심판 AI입니다. card.ruleText의 한글 문장을 정확히 해석하세요. 이 단계에서는 “모두 이긴다”, “무조건 이긴다”, 자기 자신을 이김, 판정할 수 없을 정도로 모호함 같은 명백한 사기만 거부합니다. 최종 밸런스 판정은 이후 5×5 상성표 단계에서 합니다. beats에는 문장에서 확인된 대상 ID만 넣고, 문장에 없는 대상은 넣지 마세요. summary는 60자 이내, reasons는 최대 2개·각 60자 이내의 한국어 문장으로 작성하세요.\n\n데이터:\n${JSON.stringify(input)}` : `당신은 지뢰 글리코의 최종 공정성 심판 AI입니다. 각 플레이어가 가진 5장(가위·바위·보·창작 패 2장)으로 플레이어 1의 행 5장 × 플레이어 2의 열 5장인 실제 5×5 대전 매트릭스를 먼저 완성한 뒤 공정성을 검증하세요.\n\n판정 규칙:\n- 기본 패는 가위>보, 바위>가위, 보>바위입니다.\n- beats는 해당 패가 이기는 대상 ID 목록이며, 목록에 없으면 무승부입니다.\n- 5×5 매트릭스에서 어느 한 창작 패가 상대의 선택지 전부를 이기거나, 약점 없이 일방적으로 우세하면 사기 패입니다.\n- A가 B를 이기고 B도 A를 이기면 모순입니다.\n- 각 창작 패는 실제 상대의 5장 중 최소 하나를 이기고, 최소 하나에게 져야 합니다.\n- 자기 자신, 존재하지 않는 ID, 중복 이름은 부적합입니다.\napproved는 위반이 하나도 없을 때만 true로 하세요. reasons는 최대 3개의 짧은 한국어 배열로 작성하세요.\n\n데이터:\n${JSON.stringify(input)}`;
+  const prompt = input.mode === 'battle' ? `당신은 지뢰 글리코 경기 심판 AI입니다. 등록된 한글 규칙과 기본 가위바위보 규칙만 사용해 두 선택의 승패를 판정하세요. winner는 플레이어 1이면 0, 플레이어 2면 1, 무승부면 -1입니다. reason은 한국어 한 문장, 40자 이내로 작성하세요.\n\n데이터:\n${JSON.stringify(input)}` : input.mode === 'card' ? `당신은 지뢰 글리코 창작 패의 엄격한 등록 심판 AI입니다. card.ruleText의 한글 문장을 정확히 해석해, 새 패와 기본 가위·바위·보 및 이미 등록된 같은 플레이어의 다른 창작 패를 함께 놓은 상성표로 검증하세요. 새 패가 비교 가능한 기존 패 전체를 이기거나, “모든/전부/다/무조건 이긴다”처럼 약점 없이 전칭 승리를 선언하면 무조건 approved=false입니다. 자기 자신을 이김, 존재하지 않는 대상, 판정 불가한 모호함도 거부하세요. beats에는 문장에서 확인된 실제 대상 ID만 넣고, 문장에 없는 대상은 넣지 마세요. summary는 60자 이내, reasons는 최대 2개·각 60자 이내의 한국어 문장으로 작성하세요.\n\n데이터:\n${JSON.stringify(input)}` : `당신은 지뢰 글리코의 최종 공정성 심판 AI입니다. 각 플레이어가 가진 5장(가위·바위·보·창작 패 2장)으로 플레이어 1의 행 5장 × 플레이어 2의 열 5장인 실제 5×5 대전 매트릭스를 먼저 완성한 뒤 공정성을 검증하세요.\n\n판정 규칙:\n- 기본 패는 가위>보, 바위>가위, 보>바위입니다.\n- beats는 해당 패가 이기는 대상 ID 목록이며, 목록에 없으면 무승부입니다.\n- 5×5 매트릭스에서 어느 한 창작 패가 상대의 선택지 전부를 이기거나, 약점 없이 일방적으로 우세하면 사기 패입니다.\n- A가 B를 이기고 B도 A를 이기면 모순입니다.\n- 각 창작 패는 실제 상대의 5장 중 최소 하나를 이기고, 최소 하나에게 져야 합니다.\n- 자기 자신, 존재하지 않는 ID, 중복 이름은 부적합입니다.\napproved는 위반이 하나도 없을 때만 true로 하세요. reasons는 최대 3개의 짧은 한국어 배열로 작성하세요.\n\n데이터:\n${JSON.stringify(input)}`;
   const outputContract = input.mode === 'battle'
     ? '{"winner": 0, "reason": "한국어 판정 근거"}'
     : input.mode === 'card'
@@ -88,6 +101,6 @@ export default async function handler(req, res) {
       if (!text) return res.status(502).json({ error: 'AI가 판정 결과를 반환하지 않았습니다.' });
     }
     let verdict; try { verdict = structuredVerdict || parseVerdict(text); } catch { return res.status(502).json({ error: 'AI 심판 응답이 완성되지 않았습니다. 다시 저장해 주세요.' }); }
-    return res.status(200).json({ ...verdict, engine: provider });
+    return res.status(200).json({ ...auditCardVerdict(input, verdict), engine: provider });
   } catch (error) { return res.status(400).json({ error: error.message || 'AI 심판 요청을 처리하지 못했습니다.' }); }
 }
